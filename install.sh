@@ -21,7 +21,7 @@ sudo useradd -r -s /bin/false iptvmanager
 sudo usermod -aG video iptvmanager
 
 # 5. نسخ ملفات المشروع
-git clone https://github.com/your-repo/iptv-manager.git /tmp/iptv-manager
+git clone https://github.com/hsnmoath1-sudo/iptv-manager.git /tmp/iptv-manager
 sudo cp -r /tmp/iptv-manager/* /opt/iptv-manager/
 
 # 6. إعداد أذونات
