@@ -1,0 +1,33 @@
+#!/bin/bash
+# سكريبت إدارة النظام الرئيسي
+
+case "$1" in
+    start)
+        echo "بدء نظام IPTV Manager..."
+        sudo systemctl start iptv-manager
+        ;;
+    stop)
+        echo "إيقاف نظام IPTV Manager..."
+        sudo systemctl stop iptv-manager
+        ;;
+    restart)
+        echo "إعادة تشغيل نظام IPTV Manager..."
+        sudo systemctl restart iptv-manager
+        ;;
+    status)
+        sudo systemctl status iptv-manager
+        ;;
+    logs)
+        tail -f /opt/iptv-manager/logs/system.log
+        ;;
+    backup)
+        sudo -u iptvmanager python3 /opt/iptv-manager/bin/backup.py
+        ;;
+    import)
+        sudo -u iptvmanager python3 /opt/iptv-manager/bin/import-m3u8.py "$2"
+        ;;
+    *)
+        echo "الاستخدام: $0 {start|stop|restart|status|logs|backup|import [url]}"
+        exit 1
+        ;;
+esac

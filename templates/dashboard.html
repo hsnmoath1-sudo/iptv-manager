@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة IPTV المتكامل</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 250px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .main-content {
+            margin-right: 250px;
+            padding: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .channel-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 5px solid var(--secondary);
+            transition: all 0.3s;
+        }
+        
+        .channel-card.running {
+            border-left-color: var(--success);
+            background: linear-gradient(90deg, #f8fff8 0%, white 100%);
+        }
+        
+        .channel-card.stopped {
+            border-left-color: var(--danger);
+            background: linear-gradient(90deg, #fff8f8 0%, white 100%);
+        }
+        
+        .channel-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .btn-action {
+            padding: 8px 15px;
+            border-radius: 25px;
+            border: none;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-start {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-stop {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-edit {
+            background: var(--warning);
+            color: white;
+        }
+        
+        .log-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .log-error {
+            color: var(--danger);
+            background: #fff5f5;
+        }
+        
+        .log-warning {
+            color: var(--warning);
+            background: #fffbf0;
+        }
+        
+        .log-info {
+            color: var(--secondary);
+        }
+        
+        .progress-thin {
+            height: 5px;
+            margin-top: 5px;
+        }
+        
+        .system-monitor {
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            .main-content {
+                margin-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- الشريط الجانبي -->
+    <div class="sidebar">
+        <div class="p-3 text-center border-bottom">
+            <h4 class="mb-0">
+                <i class="bi bi-broadcast"></i>
+                IPTV Manager
+            </h4>
+            <small class="text-muted">النظام المتكامل</small>
+        </div>
+        
+        <div class="p-3">
+            <div class="list-group list-group-flush">
+                <a href="#dashboard" class="list-group-item list-group-item-action active" onclick="showSection('dashboard')">
+                    <i class="bi bi-speedometer2"></i> لوحة التحكم
+                </a>
+                <a href="#channels" class="list-group-item list-group-item-action" onclick="showSection('channels')">
+                    <i class="bi bi-tv"></i> إدارة القنوات
+                </a>
+                <a href="#import" class="list-group-item list-group-item-action" onclick="showSection('import')">
+                    <i class="bi bi-download"></i> استيراد قنوات
+                </a>
+                <a href="#scheduler" class="list-group-item list-group-item-action" onclick="showSection('scheduler')">
+                    <i class="bi bi-clock"></i> الجدولة
+                </a>
+                <a href="#logs" class="list-group-item list-group-item-action" onclick="showSection('logs')">
+                    <i class="bi bi-journal-text"></i> السجلات
+                </a>
+                <a href="#backup" class="list-group-item list-group-item-action" onclick="showSection('backup')">
+                    <i class="bi bi-archive"></i> النسخ الاحتياطي
+                </a>
+                <a href="#system" class="list-group-item list-group-item-action" onclick="showSection('system')">
+                    <i class="bi bi-gear"></i> إعدادات النظام
+                </a>
+            </div>
+        </div>
+        
+        <div class="position-absolute bottom-0 w-100 p-3 border-top">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted" id="current-time"></small>
+                <button class="btn btn-sm btn-outline-danger" onclick="logout()">
+                    <i class="bi bi-box-arrow-left"></i> خروج
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        <!-- شريط النظام -->
+        <div class="system-monitor">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <small>👑 وحدة المعالجة المركزية</small>
+                    <div class="progress progress-thin">
+                        <div id="cpu-progress" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="cpu-percent" class="fw-bold">0%</div>
+                </div>
+                <div class="col-md-3">
+                    <small>💾 الذاكرة</small>
+                    <div class="progress progress-thin">
+                        <div id="memory-progress" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="memory-percent" class="fw-bold">0%</div>
+                </div>
+                <div class="col-md-3">
+                    <small>📡 القنوات النشطة</small>
+                    <div id="active-channels" class="fw-bold display-6">0</div>
+                </div>
+                <div class="col-md-3">
+                    <small>⏱ وقت التشغيل</small>
+                    <div id="system-uptime" class="fw-bold">--</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- الأقسام -->
+        <div id="sections">
+            <!-- قسم لوحة التحكم -->
+            <div id="dashboard-section">
+                <h3><i class="bi bi-speedometer2"></i> لوحة التحكم</h3>
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <i class="bi bi-tv display-4 text-primary"></i>
+                            <h3 id="total-channels">0</h3>
+                            <p class="text-muted">إجمالي القنوات</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <i class="bi bi-play-circle display-4 text-success"></i>
+                            <h3 id="running-channels">0</h3>
+                            <p class="text-muted">قنوات نشطة</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <i class="bi bi-stop-circle display-4 text-danger"></i>
+                            <h3 id="stopped-channels">0</h3>
+                            <p class="text-muted">قنوات متوقفة</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <i class="bi bi-lightning display-4 text-warning"></i>
+                            <h3 id="total-bitrate">0</h3>
+                            <p class="text-muted">معدل البت الإجمالي</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-8">
+                        <div class="stat-card">
+                            <h5>القنوات النشطة حالياً</h5>
+                            <div id="active-channels-list" class="mt-3">
+                                <!-- سيتم ملؤها بالجافا سكريبت -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <h5>إجراءات سريعة</h5>
+                            <div class="d-grid gap-2 mt-3">
+                                <button class="btn btn-success" onclick="batchAction('start', 'all')">
+                                    <i class="bi bi-play-fill"></i> تشغيل الكل
+                                </button>
+                                <button class="btn btn-danger" onclick="batchAction('stop', 'all')">
+                                    <i class="bi bi-stop-fill"></i> إيقاف الكل
+                                </button>
+                                <button class="btn btn-warning" onclick="showSection('import')">
+                                    <i class="bi bi-download"></i> استيراد جديد
+                                </button>
+                                <button class="btn btn-primary" onclick="showSection('channels')">
+                                    <i class="bi bi-gear"></i> إدارة القنوات
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم إدارة القنوات -->
+            <div id="channels-section" style="display: none;">
+                <h3><i class="bi bi-tv"></i> إدارة القنوات</h3>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <button class="btn btn-success btn-sm" onclick="batchAction('start', 'selected')">
+                                <i class="bi bi-play"></i> تشغيل المحدد
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="batchAction('stop', 'selected')">
+                                <i class="bi bi-stop"></i> إيقاف المحدد
+                            </button>
+                        </div>
+                        <div>
+                            <input type="text" id="channel-search" class="form-control form-control-sm" 
+                                   placeholder="بحث في القنوات..." onkeyup="searchChannels()">
+                        </div>
+                    </div>
+                    
+                    <div id="channels-list-container">
+                        <!-- سيتم ملؤها بالجافا سكريبت -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم الاستيراد -->
+            <div id="import-section" style="display: none;">
+                <h3><i class="bi bi-download"></i> استيراد قنوات</h3>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <h5>استيراد من M3U8</h5>
+                            <div class="mb-3">
+                                <label class="form-label">رابط ملف M3U8</label>
+                                <input type="text" id="m3u8-url" class="form-control" 
+                                       value="http://192.168.3.2:800/playlist.m3u8">
+                            </div>
+                            <button class="btn btn-primary w-100" onclick="importChannels()">
+                                <i class="bi bi-cloud-download"></i> استيراد القنوات
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <h5>خيارات الاستيراد</h5>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="auto-enable" checked>
+                                <label class="form-check-label" for="auto-enable">
+                                    تمكين القنوات المستوردة تلقائياً
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="auto-transcode" checked>
+                                <label class="form-check-label" for="auto-transcode">
+                                    تحويل تلقائي إلى SD
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="replace-existing">
+                                <label class="form-check-label" for="replace-existing">
+                                    استبدال القنوات الموجودة
+                                </label>
+                            </div>
+                            <hr>
+                            <div id="import-status" class="small text-muted">
+                                جاهز للاستيراد...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم السجلات -->
+            <div id="logs-section" style="display: none;">
+                <h3><i class="bi bi-journal-text"></i> سجلات النظام</h3>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <select id="log-level" class="form-select form-select-sm" style="width: 150px;">
+                                <option value="all">جميع المستويات</option>
+                                <option value="error">أخطاء فقط</option>
+                                <option value="warning">تحذيرات</option>
+                                <option value="info">معلومات</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="refreshLogs()">
+                                <i class="bi bi-arrow-clockwise"></i> تحديث
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="clearLogs()">
+                                <i class="bi bi-trash"></i> مسح
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div id="logs-container" style="height: 500px; overflow-y: auto; font-family: monospace;">
+                            <!-- السجلات ستظهر هنا -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- المودال لتعديل القناة -->
+    <div class="modal fade" id="editChannelModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تعديل إعدادات القناة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-channel-form">
+                        <input type="hidden" id="edit-channel-id">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">اسم القناة</label>
+                                    <input type="text" id="edit-channel-name" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">رابط المصدر</label>
+                                    <input type="text" id="edit-channel-url" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">عنوان الإخراج</label>
+                                    <input type="text" id="edit-output-ip" class="form-control" value="239.255.100.1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">منفذ الإخراج</label>
+                                    <input type="number" id="edit-output-port" class="form-control" min="6000" max="7000" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">معدل البت</label>
+                                    <select id="edit-bitrate" class="form-select">
+                                        <option value="500k">500 كيلوبت/ثانية</option>
+                                        <option value="800k" selected>800 كيلوبت/ثانية</option>
+                                        <option value="1000k">1 ميغابت/ثانية</option>
+                                        <option value="1200k">1.2 ميغابت/ثانية</option>
+                                        <option value="1500k">1.5 ميغابت/ثانية</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">الدقة</label>
+                                    <select id="edit-resolution" class="form-select">
+                                        <option value="640x480">640x480 (SD)</option>
+                                        <option value="720x576" selected>720x576 (SD)</option>
+                                        <option value="copy">نسخ كما هي</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <div class="form-check form-switch mt-4">
+                                        <input class="form-check-input" type="checkbox" id="edit-enabled" checked>
+                                        <label class="form-check-label" for="edit-enabled">مفعلة</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <div class="form-check form-switch mt-4">
+                                        <input class="form-check-input" type="checkbox" id="edit-auto-start">
+                                        <label class="form-check-label" for="edit-auto-start">تشغيل تلقائي</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">وقت البدء</label>
+                                    <input type="time" id="edit-start-time" class="form-control" value="06:00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">وقت الإيقاف</label>
+                                    <input type="time" id="edit-stop-time" class="form-control" value="02:00">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" onclick="saveChannelChanges()">حفظ التغييرات</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        // الاتصال بالسوكيت
+        const socket = io();
+        
+        // بيانات التطبيق
+        let channels = [];
+        let selectedChannels = new Set();
+        let currentSection = 'dashboard';
+        
+        // تحديث الوقت
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                now.toLocaleTimeString('ar-SA') + ' - ' + 
+                now.toLocaleDateString('ar-SA');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+        
+        // عرض قسم
+        function showSection(sectionId) {
+            document.querySelectorAll('#sections > div').forEach(div => {
+                div.style.display = 'none';
+            });
+            document.getElementById(sectionId + '-section').style.display = 'block';
+            
+            // تحديث القائمة النشطة
+            document.querySelectorAll('.list-group-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            currentSection = sectionId;
+            
+            // تحميل البيانات إذا لزم
+            if (sectionId === 'channels') {
+                loadChannels();
+            } else if (sectionId === 'logs') {
+                loadSystemLogs();
+            }
+        }
+        
+        // تسجيل الخروج
+        function logout() {
+            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                window.location.href = '/logout';
+            }
+        }
+        
+        // تحميل القنوات
+        async function loadChannels() {
+            try {
+                const response = await fetch('/api/channels');
+                const data = await response.json();
+                channels = data.channels;
+                
+                updateDashboardStats();
+                renderChannelsList();
+                
+            } catch (error) {
+                console.error('خطأ في تحميل القنوات:', error);
+            }
+        }
+        
+        // تحديث إحصائيات لوحة التحكم
+        function updateDashboardStats() {
+            const total = channels.length;
+            const running = channels.filter(c => c.status === 'running').length;
+            const stopped = channels.filter(c => c.status === 'stopped').length;
+            
+            document.getElementById('total-channels').textContent = total;
+            document.getElementById('running-channels').textContent = running;
+            document.getElementById('stopped-channels').textContent = stopped;
+            document.getElementById('active-channels').textContent = running;
+            
+            // تحديث قائمة القنوات النشطة
+            const activeList = document.getElementById('active-channels-list');
+            if (activeList) {
+                activeList.innerHTML = '';
+                
+                const activeChannels = channels.filter(c => c.status === 'running')
+                    .slice(0, 5); // أول 5 قنوات فقط
+                
+                if (activeChannels.length === 0) {
+                    activeList.innerHTML = '<p class="text-muted text-center">لا توجد قنوات نشطة</p>';
+                } else {
+                    activeChannels.forEach(channel => {
+                        const div = document.createElement('div');
+                        div.className = 'd-flex justify-content-between align-items-center mb-2';
+                        div.innerHTML = `
+                            <div>
+                                <strong>${channel.name}</strong><br>
+                                <small class="text-muted">udp://${channel.output.address}:${channel.output.port}</small>
+                            </div>
+                            <div class="text-end">
+                                <small>CPU: ${channel.stats?.cpu_percent || 0}%</small><br>
+                                <small>Mem: ${channel.stats?.memory_percent || 0}%</small>
+                            </div>
+                        `;
+                        activeList.appendChild(div);
+                    });
+                }
+            }
+        }
+        
+        // عرض قائمة القنوات
+        function renderChannelsList() {
+            const container = document.getElementById('channels-list-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            channels.forEach(channel => {
+                const isRunning = channel.status === 'running';
+                const isSelected = selectedChannels.has(channel.id);
+                
+                const card = document.createElement('div');
+                card.className = `channel-card ${isRunning ? 'running' : 'stopped'}`;
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input channel-checkbox" type="checkbox" 
+                                   value="${channel.id}" ${isSelected ? 'checked' : ''}
+                                   onchange="toggleChannelSelection('${channel.id}', this.checked)">
+                            <label class="form-check-label">
+                                <strong>${channel.name}</strong>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <span class="status-badge ${isRunning ? 'status-running' : 'status-stopped'}">
+                                ${isRunning ? '🟢 نشطة' : '🔴 متوقفة'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <small class="text-muted d-block">المصدر: ${channel.source_url}</small>
+                        <small class="text-muted">الإخراج: udp://${channel.output.address}:${channel.output.port}</small>
+                    </div>
+                    
+                    <div class="mt-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <small>بت: ${channel.output.bitrate}</small> | 
+                            <small>دقة: ${channel.output.resolution}</small>
+                        </div>
+                        
+                        <div>
+                            ${isRunning ? 
+                                `<button class="btn-action btn-stop btn-sm" onclick="stopChannel('${channel.id}')">
+                                    <i class="bi bi-stop-fill"></i> إيقاف
+                                </button>` :
+                                `<button class="btn-action btn-start btn-sm" onclick="startChannel('${channel.id}')">
+                                    <i class="bi bi-play-fill"></i> تشغيل
+                                </button>`
+                            }
+                            <button class="btn-action btn-edit btn-sm" onclick="editChannel('${channel.id}')">
+                                <i class="bi bi-pencil"></i> تعديل
+                            </button>
+                        </div>
+                    </div>
+                    
+                    ${isRunning && channel.stats ? `
+                        <div class="mt-2">
+                            <small>🕐 ${formatUptime(channel.stats.uptime)}</small>
+                            <div class="progress progress-thin">
+                                <div class="progress-bar bg-success" style="width: ${Math.min(channel.stats.cpu_percent, 100)}%"></div>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        // تنسيق وقت التشغيل
+        function formatUptime(seconds) {
+            if (!seconds) return '0 ثواني';
+            
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            if (hours > 0) {
+                return `${hours}س ${minutes}د`;
+            } else if (minutes > 0) {
+                return `${minutes}د ${secs}ث`;
+            } else {
+                return `${secs}ث`;
+            }
+        }
+        
+        // تحديد/إلغاء تحديد قناة
+        function toggleChannelSelection(channelId, isChecked) {
+            if (isChecked) {
+                selectedChannels.add(channelId);
+            } else {
+                selectedChannels.delete(channelId);
+            }
+        }
+        
+        // البحث في القنوات
+        function searchChannels() {
+            const searchTerm = document.getElementById('channel-search').value.toLowerCase();
+            
+            document.querySelectorAll('.channel-card').forEach(card => {
+                const channelName = card.querySelector('strong').textContent.toLowerCase();
+                card.style.display = channelName.includes(searchTerm) ? 'block' : 'none';
+            });
+        }
+        
+        // تشغيل قناة
+        async function startChannel(channelId) {
+            try {
+                const response = await fetch(`/api/channels/${channelId}/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('تم تشغيل القناة بنجاح', 'success');
+                    await loadChannels();
+                } else {
+                    showToast(`خطأ: ${result.message}`, 'danger');
+                }
+                
+            } catch (error) {
+                showToast('خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+        
+        // إيقاف قناة
+        async function stopChannel(channelId) {
+            if (!confirm('هل أنت متأكد من إيقاف هذه القناة؟')) return;
+            
+            try {
+                const response = await fetch(`/api/channels/${channelId}/stop`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('تم إيقاف القناة بنجاح', 'success');
+                    await loadChannels();
+                } else {
+                    showToast(`خطأ: ${result.message}`, 'danger');
+                }
+                
+            } catch (error) {
+                showToast('خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+        
+        // تحرير قناة
+        function editChannel(channelId) {
+            const channel = channels.find(c => c.id === channelId);
+            if (!channel) return;
+            
+            document.getElementById('edit-channel-id').value = channelId;
+            document.getElementById('edit-channel-name').value = channel.name;
+            document.getElementById('edit-channel-url').value = channel.source_url;
+            document.getElementById('edit-output-ip').value = channel.output.address;
+            document.getElementById('edit-output-port').value = channel.output.port;
+            document.getElementById('edit-bitrate').value = channel.output.bitrate;
+            document.getElementById('edit-resolution').value = channel.output.resolution;
+            document.getElementById('edit-enabled').checked = channel.enabled;
+            document.getElementById('edit-auto-start').checked = channel.auto_start;
+            document.getElementById('edit-start-time').value = channel.schedule?.start_time || '06:00';
+            document.getElementById('edit-stop-time').value = channel.schedule?.stop_time || '02:00';
+            
+            const modal = new bootstrap.Modal(document.getElementById('editChannelModal'));
+            modal.show();
+        }
+        
+        // حفظ تعديلات القناة
+        async function saveChannelChanges() {
+            const channelId = document.getElementById('edit-channel-id').value;
+            
+            const updates = {
+                name: document.getElementById('edit-channel-name').value,
+                source_url: document.getElementById('edit-channel-url').value,
+                enabled: document.getElementById('edit-enabled').checked,
+                auto_start: document.getElementById('edit-auto-start').checked,
+                output: {
+                    address: document.getElementById('edit-output-ip').value,
+                    port: parseInt(document.getElementById('edit-output-port').value),
+                    bitrate: document.getElementById('edit-bitrate').value,
+                    resolution: document.getElementById('edit-resolution').value
+                },
+                schedule: {
+                    start_time: document.getElementById('edit-start-time').value,
+                    stop_time: document.getElementById('edit-stop-time').value
+                }
+            };
+            
+            try {
+                const response = await fetch(`/api/channels/${channelId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('تم حفظ التغييرات بنجاح', 'success');
+                    
+                    // إغلاق المودال
+                    bootstrap.Modal.getInstance(document.getElementById('editChannelModal')).hide();
+                    
+                    // تحديث القائمة
+                    await loadChannels();
+                } else {
+                    showToast(`خطأ: ${result.message}`, 'danger');
+                }
+                
+            } catch (error) {
+                showToast('خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+        
+        // إجراء مجمّع
+        async function batchAction(action, scope) {
+            let channelIds = [];
+            
+            if (scope === 'all') {
+                channelIds = channels.map(c => c.id);
+            } else if (scope === 'selected') {
+                if (selectedChannels.size === 0) {
+                    showToast('يرجى تحديد قنوات أولاً', 'warning');
+                    return;
+                }
+                channelIds = Array.from(selectedChannels);
+            }
+            
+            if (channelIds.length === 0) {
+                showToast('لا توجد قنوات محددة', 'warning');
+                return;
+            }
+            
+            if (action === 'stop' && !confirm(`هل أنت متأكد من إيقاف ${channelIds.length} قناة؟`)) {
+                return;
+            }
+            
+            try {
+                const url = action === 'start' ? '/api/batch/start' : '/api/batch/stop';
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channels: channelIds })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(`تم ${action === 'start' ? 'تشغيل' : 'إيقاف'} ${channelIds.length} قناة`, 'success');
+                    await loadChannels();
+                    selectedChannels.clear();
+                }
+                
+            } catch (error) {
+                showToast('خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+        
+        // استيراد قنوات
+        async function importChannels() {
+            const m3u8Url = document.getElementById('m3u8-url').value;
+            
+            if (!m3u8Url) {
+                showToast('يرجى إدخال رابط ملف M3U8', 'warning');
+                return;
+            }
+            
+            const statusElement = document.getElementById('import-status');
+            statusElement.innerHTML = '<div class="spinner-border spinner-border-sm"></div> جاري الاستيراد...';
+            
+            try {
+                const response = await fetch('/api/channels/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ m3u8_url: m3u8Url })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusElement.innerHTML = `
+                        <div class="text-success">
+                            <i class="bi bi-check-circle"></i> تم استيراد ${result.imported} قناة<br>
+                            <small>إجمالي القنوات الآن: ${result.total}</small>
+                        </div>
+                    `;
+                    showToast('تم الاستيراد بنجاح', 'success');
+                    await loadChannels();
+                } else {
+                    statusElement.innerHTML = `
+                        <div class="text-danger">
+                            <i class="bi bi-x-circle"></i> خطأ في الاستيراد
+                        </div>
+                    `;
+                    showToast(`خطأ: ${result.message}`, 'danger');
+                }
+                
+            } catch (error) {
+                statusElement.innerHTML = `
+                    <div class="text-danger">
+                        <i class="bi bi-x-circle"></i> خطأ في الاتصال
+                    </div>
+                `;
+                showToast('خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+        
+        // تحميل سجلات النظام
+        async function loadSystemLogs() {
+            try {
+                const response = await fetch('/api/logs/system');
+                const result = await response.json();
+                
+                const container = document.getElementById('logs-container');
+                container.innerHTML = '';
+                
+                if (result.logs && result.logs.length > 0) {
+                    result.logs.forEach(log => {
+                        const logEntry = document.createElement('div');
+                        logEntry.className = 'log-entry';
+                        
+                        if (log.includes('ERROR') || log.includes('error')) {
+                            logEntry.classList.add('log-error');
+                        } else if (log.includes('WARNING') || log.includes('warning')) {
+                            logEntry.classList.add('log-warning');
+                        } else {
+                            logEntry.classList.add('log-info');
+                        }
+                        
+                        logEntry.textContent = log;
+                        container.appendChild(logEntry);
+                    });
+                    
+                    // التمرير للأسفل
+                    container.scrollTop = container.scrollHeight;
+                }
+                
+            } catch (error) {
+                console.error('خطأ في تحميل السجلات:', error);
+            }
+        }
+        
+        // إشعارات
+        function showToast(message, type = 'info') {
+            // إنشاء عنصر الإشعار
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            // إضافة لحاوية الإشعارات
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'position-fixed bottom-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+            
+            container.appendChild(toast);
+            
+            // تفعيل الإشعار
+            const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+            bsToast.show();
+            
+            // إزالة الإشعار بعد الاختفاء
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+        
+        // استقبال تحديثات من السوكيت
+        socket.on('channel_status', (data) => {
+            showToast(`القناة ${data.status === 'running' ? 'بدأت' : 'توقفت'}`, 
+                     data.status === 'running' ? 'success' : 'info');
+            loadChannels();
+        });
+        
+        socket.on('system_stats', (stats) => {
+            document.getElementById('cpu-percent').textContent = `${stats.cpu_percent}%`;
+            document.getElementById('memory-percent').textContent = `${stats.memory_percent}%`;
+            
+            document.getElementById('cpu-progress').style.width = `${stats.cpu_percent}%`;
+            document.getElementById('memory-progress').style.width = `${stats.memory_percent}%`;
+        });
+        
+        // التحميل الأولي
+        document.addEventListener('DOMContentLoaded', () => {
+            loadChannels();
+            
+            // تحديث الإحصائيات كل 10 ثوانٍ
+            setInterval(loadChannels, 10000);
+            
+            // طلب تحديثات النظام
+            setInterval(() => {
+                socket.emit('get_system_stats');
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
